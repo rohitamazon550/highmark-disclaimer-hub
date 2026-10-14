@@ -61,7 +61,7 @@ export async function getProfile() {
   if (!token) return null;
   if (profile) return profile;
   const currentGeneration = generation;
-  const url = new URL('/ims/profile/v1', IMS_BASE);
+  const url = new URL('/ims/userinfo/v2', IMS_BASE);
   url.searchParams.set('client_id', IMS_CLIENT_ID);
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}`, client_id: IMS_CLIENT_ID },
@@ -72,7 +72,13 @@ export async function getProfile() {
   if (!response.ok) throw new Error('Unable to retrieve your IMS profile.');
   const result = await response.json();
   if (generation !== currentGeneration || getToken() !== token) return null;
-  profile = result;
+  const displayName = [result.name, result.given_name, result.family_name]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''));
+  profile = {
+    userId: result.sub,
+    displayName: displayName[0] || displayName.slice(1).filter(Boolean).join(' '),
+    email: typeof result.email === 'string' ? result.email : '',
+  };
   return profile;
 }
 
@@ -216,7 +222,8 @@ async function authorize(silent, popup) {
   }, Math.min(lifetime * 1000, 2147483647));
   try {
     await getProfile();
-    message = '';
+    message = profile?.displayName ? ''
+      : 'Signed in, but Adobe did not return your name. Confirm the profile scope is granted for this credential.';
   } catch (error) {
     message = 'Signed in, but your profile could not be loaded.';
   }

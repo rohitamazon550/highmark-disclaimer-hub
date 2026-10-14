@@ -87,8 +87,12 @@ Authorization uses the documented `/ims/authorize/v2` PKCE code flow and
 The callback relays only code/state/error, checks the target origin, and clears
 its query string. The opener checks origin, source window, and state before
 exchanging a code. No ID token claims are used as proof of identity.
-Profile data comes from an authenticated `/ims/profile/v1` request, the endpoint
-used by the current IMS library. Tokens never enter URLs or application logs.
+Profile data comes from an authenticated `/ims/userinfo/v2` request, documented
+in Adobe's IMS API reference. Its `name` (or `given_name` and `family_name`) is
+mapped to the displayed name. Adobe documents `profile` as required for name
+claims and `email` for email claims. If those scopes are not granted, login may
+succeed without either field; ask the credential administrator to confirm access.
+Tokens never enter URLs or application logs.
 No application code writes localStorage, sessionStorage, or cookies. The Adobe
 library itself may probe/use browser storage for its own bookkeeping; Adobe/IdP
 session cookies are outside our control. This is not a zero-storage SDK promise.
@@ -200,8 +204,8 @@ Reviewed on 2026-10-14:
 
 The IMS library documentation URL `/imslib/docs.html` returned 403. SDK-specific
 keys/behavior were verified against the served source, not a successfully fetched
-SDK reference page. The Console API reference documents userinfo/v2, whereas
-profile/v1 was verified from the actual SDK. SDK logout behavior likewise comes
+SDK reference page. The identity lookup now uses the Console API reference's
+userinfo/v2 endpoint rather than the SDK's profile/v1. SDK logout behavior comes
 from served source. Its unversioned CDN asset can change; recheck before production.
 No real credential, Console scope grants, deployed action URL, Exchange
 entitlements, IdP, production CSP headers, or authenticated EDS content source was
