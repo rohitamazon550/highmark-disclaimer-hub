@@ -1,0 +1,45 @@
+.login {
+  overflow-wrap: anywhere;
+}
+
+.login .login-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.login button {
+  margin: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.login [hidden] {
+  display: none;
+}
+
+.login .login-status {
+  min-height: 1.5em;
+}
+
+.login pre {
+  max-width: 100%;
+  padding: 12px;
+  border: 1px solid currentcolor;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+.login summary {
+  cursor: pointer;
+}
+
+.login button:focus-visible,
+.login summary:focus-visible {
+  outline: 2px solid currentcolor;
+  outline-offset: 4px;
+}
