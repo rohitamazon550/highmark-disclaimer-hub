@@ -2,7 +2,7 @@ export const IMS_CLIENT_ID = 'd2c9776f81744fa99418cf2b2709e68f';
 export const IMS_SCOPE = 'AdobeID,openid';
 export const IMS_ENVIRONMENT = 'prod';
 export const IMS_ORG_ID = '107121BF637764C60A495FA5@AdobeOrg';
-export const WHOAMI_URL = '<WHOAMI_URL>';
+export const WHOAMI_URL = 'https://1070326-887lemonowl-stage.adobeioruntime.net/api/v1/web/loginpoc/whoami';
 export const TEST_ORIGINS = [
   'https://main--highmark-disclaimer-hub--rohitamazon550.aem.page',
   'http://localhost:3000',
