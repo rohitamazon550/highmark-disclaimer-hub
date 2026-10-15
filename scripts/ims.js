@@ -158,38 +158,47 @@ async function authorize(silent, popup) {
   let code;
   try {
     code = await new Promise((resolve, reject) => {
+      const channel = popup && window.BroadcastChannel
+        ? new window.BroadcastChannel(`loginpoc-ims-${state}`) : null;
       let timeout;
       let closed;
       const cleanup = () => {
         clearTimeout(timeout);
         clearInterval(closed);
         window.removeEventListener('message', receive);
+        channel?.close();
       };
-      function receive(event) {
-        if (event.origin !== window.location.origin
-          || event.source !== (frame ? frame.contentWindow : popup)
-          || event.data?.type !== 'loginpoc-ims'
-          || event.data.state !== state) return;
+      function complete(data) {
+        if (data?.type !== 'loginpoc-ims' || data.state !== state) return;
+        channel?.postMessage({ type: 'loginpoc-ims-ack', state });
         cleanup();
-        if (event.data.error || typeof event.data.code !== 'string' || !event.data.code) {
-          const reason = event.data.error === 'invalid_scope'
+        if (data.error || typeof data.code !== 'string' || !data.code) {
+          const reason = data.error === 'invalid_scope'
             ? 'Adobe rejected the requested scopes. Revert IMS_SCOPE to AdobeID,openid and sign in again.'
             : 'Adobe sign-in was not completed.';
           reject(new Error(reason));
-        } else resolve(event.data.code);
+        } else resolve(data.code);
       }
+      function receive(event) {
+        if (event.origin !== window.location.origin
+          || event.source !== (frame ? frame.contentWindow : popup)) return;
+        complete(event.data);
+      }
+      if (channel) channel.onmessage = (event) => complete(event.data);
       window.addEventListener('message', receive);
       timeout = setTimeout(() => {
         cleanup();
         reject(new Error(silent ? 'No restorable Adobe session.' : 'Adobe sign-in timed out.'));
       }, silent ? 8000 : 180000);
       if (popup) {
-        closed = setInterval(() => {
-          if (popup.closed) {
-            cleanup();
-            reject(new Error('The sign-in window was closed or isolated by browser policy.'));
-          }
-        }, 500);
+        if (!channel) {
+          closed = setInterval(() => {
+            if (popup.closed) {
+              cleanup();
+              reject(new Error('The sign-in window was closed or isolated by browser policy.'));
+            }
+          }, 500);
+        }
         popup.location.href = url.href;
       } else frame.src = url.href;
     });
