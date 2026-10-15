@@ -1,5 +1,5 @@
 export const IMS_CLIENT_ID = 'd2c9776f81744fa99418cf2b2709e68f';
-export const IMS_SCOPE = 'AdobeID,openid,profile,email';
+export const IMS_SCOPE = 'AdobeID,openid';
 export const IMS_ENVIRONMENT = 'prod';
 export const IMS_ORG_ID = '107121BF637764C60A495FA5@AdobeOrg';
 export const WHOAMI_URL = 'https://1070326-887lemonowl-stage.adobeioruntime.net/api/v1/web/loginpoc/whoami';
@@ -156,53 +156,37 @@ async function authorize(silent, popup) {
     document.body.append(frame);
   }
   let code;
-  message = silent ? 'Checking your existing Adobe session...'
-    : 'Waiting for Adobe sign-in in the popup. Keep this page open.';
-  notify();
   try {
     code = await new Promise((resolve, reject) => {
-      const channel = popup && window.BroadcastChannel
-        ? new window.BroadcastChannel(`loginpoc-ims-${state}`) : null;
       let timeout;
       let closed;
       const cleanup = () => {
         clearTimeout(timeout);
         clearInterval(closed);
         window.removeEventListener('message', receive);
-        channel?.close();
       };
-      function complete(data) {
-        if (data?.type !== 'loginpoc-ims' || data.state !== state) return;
-        channel?.postMessage({ type: 'loginpoc-ims-ack', state });
-        cleanup();
-        if (data.error || typeof data.code !== 'string' || !data.code) {
-          const reason = data.error === 'invalid_scope'
-            ? 'Adobe rejected the requested scopes. Revert IMS_SCOPE to AdobeID,openid and sign in again.'
-            : 'Adobe sign-in was not completed.';
-          reject(new Error(reason));
-        } else resolve(data.code);
-      }
       function receive(event) {
         if (event.origin !== window.location.origin
-          || event.source !== (frame ? frame.contentWindow : popup)) return;
-        complete(event.data);
+          || event.source !== (frame ? frame.contentWindow : popup)
+          || event.data?.type !== 'loginpoc-ims'
+          || event.data.state !== state) return;
+        cleanup();
+        if (event.data.error || typeof event.data.code !== 'string' || !event.data.code) {
+          reject(new Error('Adobe sign-in was not completed.'));
+        } else resolve(event.data.code);
       }
-      if (channel) channel.onmessage = (event) => complete(event.data);
       window.addEventListener('message', receive);
       timeout = setTimeout(() => {
         cleanup();
-        reject(new Error(silent ? 'No restorable Adobe session.'
-          : 'No callback received from Adobe within three minutes. Close the popup and retry; confirm both windows use the same site origin.'));
+        reject(new Error(silent ? 'No restorable Adobe session.' : 'Adobe sign-in timed out.'));
       }, silent ? 8000 : 180000);
       if (popup) {
-        if (!channel) {
-          closed = setInterval(() => {
-            if (popup.closed) {
-              cleanup();
-              reject(new Error('The sign-in window was closed or isolated by browser policy.'));
-            }
-          }, 500);
-        }
+        closed = setInterval(() => {
+          if (popup.closed) {
+            cleanup();
+            reject(new Error('The sign-in window was closed or isolated by browser policy.'));
+          }
+        }, 500);
         popup.location.href = url.href;
       } else frame.src = url.href;
     });
@@ -210,8 +194,6 @@ async function authorize(silent, popup) {
     frame?.remove();
     popup?.close();
   }
-  message = 'Adobe callback received. Exchanging the authorization code...';
-  notify();
   const tokenUrl = new URL('/ims/token/v3', IMS_BASE);
   tokenUrl.searchParams.set('client_id', IMS_CLIENT_ID);
   const response = await fetch(tokenUrl, {
@@ -239,8 +221,6 @@ async function authorize(silent, popup) {
     notify();
   }, Math.min(lifetime * 1000, 2147483647));
   try {
-    message = 'Signed in. Retrieving your Adobe profile...';
-    notify();
     await getProfile();
     message = profile?.displayName ? ''
       : 'Signed in, but Adobe did not return your name. Confirm the profile scope is granted for this credential.';
@@ -253,7 +233,6 @@ export function initIms() {
   if (initialization) return initialization;
   initialization = (async () => {
     busy = true;
-    message = 'Loading the Adobe sign-in library...';
     notify();
     try {
       if (IMS_CLIENT_ID.startsWith('<') || IMS_ORG_ID.startsWith('<')) {

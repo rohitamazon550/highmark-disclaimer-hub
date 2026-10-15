@@ -104,12 +104,7 @@ after eight seconds and offers interactive sign-in. There is no redirect loop or
 persistent local token. Expiry clears the token and profile; sign-in is required
 again. Logout clears memory first, attempts token revocation, then invokes the
 IMS SDK's session logout redirect. Corporate IdP SSO may remain active even after
-Adobe logout. Interactive callbacks also use a same-origin BroadcastChannel
-named with the random authorization state, allowing completion when popup/COOP
-policies sever the opener. The verifier and token remain in the original page's
-memory; no storage is added. Without BroadcastChannel, opener isolation still
-causes an error. Closing the popup can leave the page waiting until the
-three-minute authorization timeout when the channel fallback is active.
+Adobe logout. Popup/COOP policies that sever the opener also cause a clear fallback.
 
 ## CSP
 
