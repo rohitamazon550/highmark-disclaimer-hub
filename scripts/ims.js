@@ -172,7 +172,10 @@ async function authorize(silent, popup) {
           || event.data.state !== state) return;
         cleanup();
         if (event.data.error || typeof event.data.code !== 'string' || !event.data.code) {
-          reject(new Error('Adobe sign-in was not completed.'));
+          const reason = event.data.error === 'invalid_scope'
+            ? 'Adobe rejected the requested scopes. Revert IMS_SCOPE to AdobeID,openid and sign in again.'
+            : 'Adobe sign-in was not completed.';
+          reject(new Error(reason));
         } else resolve(event.data.code);
       }
       window.addEventListener('message', receive);

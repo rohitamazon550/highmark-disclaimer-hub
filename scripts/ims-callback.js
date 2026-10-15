@@ -7,8 +7,10 @@ const result = {
   error: parameters.get('error'),
 };
 window.history.replaceState(null, '', window.location.pathname);
+const status = document.querySelector('[role="status"]');
 if (recipient) {
   recipient.postMessage(result, window.location.origin);
+  status.textContent = 'Adobe response sent to the sign-in page. If this window stays open, return to that page to check the error or restart sign-in.';
 } else {
-  document.querySelector('[role="status"]').textContent = 'The sign-in page is no longer open. Return to the site and sign in again.';
+  status.textContent = 'The sign-in page is no longer open. Return to the site and sign in again.';
 }
