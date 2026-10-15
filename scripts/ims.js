@@ -156,6 +156,9 @@ async function authorize(silent, popup) {
     document.body.append(frame);
   }
   let code;
+  message = silent ? 'Checking your existing Adobe session...'
+    : 'Waiting for Adobe sign-in in the popup. Keep this page open.';
+  notify();
   try {
     code = await new Promise((resolve, reject) => {
       const channel = popup && window.BroadcastChannel
@@ -188,7 +191,8 @@ async function authorize(silent, popup) {
       window.addEventListener('message', receive);
       timeout = setTimeout(() => {
         cleanup();
-        reject(new Error(silent ? 'No restorable Adobe session.' : 'Adobe sign-in timed out.'));
+        reject(new Error(silent ? 'No restorable Adobe session.'
+          : 'No callback received from Adobe within three minutes. Close the popup and retry; confirm both windows use the same site origin.'));
       }, silent ? 8000 : 180000);
       if (popup) {
         if (!channel) {
@@ -206,6 +210,8 @@ async function authorize(silent, popup) {
     frame?.remove();
     popup?.close();
   }
+  message = 'Adobe callback received. Exchanging the authorization code...';
+  notify();
   const tokenUrl = new URL('/ims/token/v3', IMS_BASE);
   tokenUrl.searchParams.set('client_id', IMS_CLIENT_ID);
   const response = await fetch(tokenUrl, {
@@ -233,6 +239,8 @@ async function authorize(silent, popup) {
     notify();
   }, Math.min(lifetime * 1000, 2147483647));
   try {
+    message = 'Signed in. Retrieving your Adobe profile...';
+    notify();
     await getProfile();
     message = profile?.displayName ? ''
       : 'Signed in, but Adobe did not return your name. Confirm the profile scope is granted for this credential.';
@@ -245,6 +253,7 @@ export function initIms() {
   if (initialization) return initialization;
   initialization = (async () => {
     busy = true;
+    message = 'Loading the Adobe sign-in library...';
     notify();
     try {
       if (IMS_CLIENT_ID.startsWith('<') || IMS_ORG_ID.startsWith('<')) {

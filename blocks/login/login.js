@@ -105,7 +105,7 @@ export default async function decorate(block) {
       output.hidden = true;
       output.textContent = '';
     }
-    status.textContent = state.busy ? 'Contacting Adobe...' : state.message;
+    status.textContent = state.message || (state.busy ? 'Contacting Adobe...' : '');
   });
   const observer = new MutationObserver(() => {
     if (!block.isConnected) {
