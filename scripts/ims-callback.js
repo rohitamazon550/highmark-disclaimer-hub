@@ -23,7 +23,13 @@ if (result.state && window.BroadcastChannel) {
 if (recipient) {
   recipient.postMessage(result, window.location.origin);
 }
-if (recipient || channel) {
+if (!result.state) {
+  status.textContent = result.error === 'invalid_scope'
+    ? 'Adobe rejected the requested scopes and returned no login state. Restore IMS_SCOPE to AdobeID,openid and restart sign-in.'
+    : 'Adobe returned no login state. This response cannot be matched safely to the original page. Close this window and restart sign-in.';
+} else if (!result.code && !result.error) {
+  status.textContent = 'The callback contains no authorization code or Adobe error. Close this window and restart sign-in from the site.';
+} else if (recipient || channel) {
   status.textContent = 'Adobe response sent to the sign-in page. If this window stays open, return to that page to check the error or restart sign-in.';
 } else {
   status.textContent = 'The sign-in page is no longer open. Return to the site and sign in again.';
