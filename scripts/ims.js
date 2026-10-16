@@ -5,6 +5,7 @@ export const IMS_ORG_ID = '107121BF637764C60A495FA5@AdobeOrg';
 export const WHOAMI_URL = 'https://1070326-887lemonowl-stage.adobeioruntime.net/api/v1/web/loginpoc/whoami';
 export const CREATE_FRAGMENT_URL = 'https://1070326-887lemonowl-stage.adobeioruntime.net/api/v1/web/loginpoc/create-fragment';
 export const UPLOAD_ASSET_URL = 'https://1070326-887lemonowl-stage.adobeioruntime.net/api/v1/web/loginpoc/upload-asset';
+export const AEM_CHECK_URL = 'https://1070326-887lemonowl-stage.adobeioruntime.net/api/v1/web/loginpoc/aem-check';
 export const TEST_ORIGINS = [
   'https://main--highmark-disclaimer-hub--rohitamazon550.aem.page',
   'http://localhost:3000',

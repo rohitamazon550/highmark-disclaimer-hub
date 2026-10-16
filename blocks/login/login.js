@@ -1,5 +1,5 @@
 import {
-  initIms, signIn, signOut, getToken, subscribe, IMS_ORG_ID, WHOAMI_URL, CREATE_FRAGMENT_URL, UPLOAD_ASSET_URL,
+  initIms, signIn, signOut, getToken, subscribe, IMS_ORG_ID, WHOAMI_URL, CREATE_FRAGMENT_URL, UPLOAD_ASSET_URL, AEM_CHECK_URL,
 } from '../../scripts/ims.js';
 
 export default async function decorate(block) {
@@ -130,6 +130,36 @@ export default async function decorate(block) {
     }
   });
   controls.insertBefore(text, create);
+  const check = button('Check AEM read access', async () => {
+    const token = getToken();
+    if (!token) throw new Error('Your session expired. Sign in again.');
+    calling = true;
+    check.disabled = true;
+    status.textContent = 'Checking AEM access...';
+    output.hidden = true;
+    try {
+      const response = await fetch(AEM_CHECK_URL, {
+        headers: { Authorization: `Bearer ${token}`, 'x-gw-ims-org-id': IMS_ORG_ID },
+        credentials: 'omit',
+        cache: 'no-store',
+        redirect: 'error',
+        signal: AbortSignal.timeout(20000),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(`${response.status}: ${result.error || 'Request failed.'}`);
+      output.textContent = JSON.stringify(result, null, 2);
+      output.hidden = false;
+      status.textContent = result.accepted ? 'AEM accepted the token.' : 'AEM rejected the token.';
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('API request blocked or unreachable. Check CORS preflight, CSP, and the deployed URL.');
+      }
+      throw error;
+    } finally {
+      calling = false;
+      check.disabled = !signedIn;
+    }
+  });
   const upload = button('Upload test file', async () => {
     const token = getToken();
     if (!token) throw new Error('Your session expired. Sign in again.');
@@ -183,6 +213,8 @@ export default async function decorate(block) {
     create.disabled = state.busy || calling;
     upload.hidden = !signedIn;
     upload.disabled = state.busy || calling;
+    check.hidden = !signedIn;
+    check.disabled = state.busy || calling;
     details.hidden = !signedIn;
     signin.disabled = !ready || state.busy;
     signout.disabled = state.busy || calling;
