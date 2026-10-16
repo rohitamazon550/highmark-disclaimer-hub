@@ -142,7 +142,11 @@ export default async function decorate(block) {
     try {
       const response = await fetch(UPLOAD_ASSET_URL, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-gw-ims-org-id': IMS_ORG_ID,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ text: value }),
         credentials: 'omit',
         cache: 'no-store',
