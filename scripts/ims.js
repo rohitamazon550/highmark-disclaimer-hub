@@ -174,7 +174,8 @@ async function authorize(silent, popup) {
           || event.data.state !== state) return;
         cleanup();
         if (event.data.error || typeof event.data.code !== 'string' || !event.data.code) {
-          reject(new Error('Adobe sign-in was not completed.'));
+          const reason = /^[a-z_]{1,40}$/.test(event.data.error) ? ` (${event.data.error})` : '';
+          reject(new Error(`Adobe sign-in was not completed${reason}.`));
         } else resolve(event.data.code);
       }
       window.addEventListener('message', receive);
