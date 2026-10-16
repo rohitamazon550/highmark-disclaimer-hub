@@ -91,11 +91,48 @@ export default async function decorate(block) {
   text.maxLength = 2000;
   text.placeholder = 'Fragment text';
   text.setAttribute('aria-label', 'Fragment text');
+  const modelInput = document.createElement('input');
+  modelInput.type = 'text';
+  modelInput.maxLength = 300;
+  modelInput.placeholder = 'Model ID (use List models)';
+  modelInput.setAttribute('aria-label', 'Content Fragment model ID');
+  const models = button('List models', async () => {
+    const token = getToken();
+    if (!token) throw new Error('Your session expired. Sign in again.');
+    calling = true;
+    models.disabled = true;
+    status.textContent = 'Loading models...';
+    output.hidden = true;
+    try {
+      const response = await fetch(CREATE_FRAGMENT_URL, {
+        headers: { Authorization: `Bearer ${token}`, 'x-gw-ims-org-id': IMS_ORG_ID },
+        credentials: 'omit',
+        cache: 'no-store',
+        redirect: 'error',
+        signal: AbortSignal.timeout(20000),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(`${response.status}: ${result.error || 'Request failed.'}`);
+      output.textContent = JSON.stringify(result, null, 2);
+      output.hidden = false;
+      status.textContent = 'Models loaded.';
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('API request blocked or unreachable. Check CORS preflight, CSP, and the deployed URL.');
+      }
+      throw error;
+    } finally {
+      calling = false;
+      models.disabled = !signedIn;
+    }
+  });
   const create = button('Create fragment', async () => {
     const token = getToken();
     if (!token) throw new Error('Your session expired. Sign in again.');
     const value = text.value.trim();
+    const modelId = modelInput.value.trim();
     if (!value) throw new Error('Enter some text first.');
+    if (!modelId) throw new Error('Paste a model ID first (click List models).');
     calling = true;
     create.disabled = true;
     status.textContent = 'Creating fragment...';
@@ -108,7 +145,7 @@ export default async function decorate(block) {
           'x-gw-ims-org-id': IMS_ORG_ID,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title: value.slice(0, 100), text: value }),
+        body: JSON.stringify({ title: value.slice(0, 100), text: value, modelId }),
         credentials: 'omit',
         cache: 'no-store',
         redirect: 'error',
@@ -130,6 +167,7 @@ export default async function decorate(block) {
     }
   });
   controls.insertBefore(text, create);
+  controls.insertBefore(modelInput, create);
   const check = button('List assets in /content/dam/projects', async () => {
     const token = getToken();
     if (!token) throw new Error('Your session expired. Sign in again.');
@@ -210,6 +248,9 @@ export default async function decorate(block) {
     call.hidden = !signedIn;
     text.hidden = !signedIn;
     create.hidden = !signedIn;
+    models.hidden = !signedIn;
+    modelInput.hidden = !signedIn;
+    models.disabled = state.busy || calling;
     create.disabled = state.busy || calling;
     upload.hidden = !signedIn;
     upload.disabled = state.busy || calling;
