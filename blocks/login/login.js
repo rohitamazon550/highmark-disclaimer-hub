@@ -1,5 +1,5 @@
 import {
-  initIms, signIn, signOut, getToken, subscribe, IMS_ORG_ID, WHOAMI_URL, CREATE_FRAGMENT_URL,
+  initIms, signIn, signOut, getToken, subscribe, IMS_ORG_ID, WHOAMI_URL, CREATE_FRAGMENT_URL, UPLOAD_ASSET_URL,
 } from '../../scripts/ims.js';
 
 export default async function decorate(block) {
@@ -130,6 +130,40 @@ export default async function decorate(block) {
     }
   });
   controls.insertBefore(text, create);
+  const upload = button('Upload test file', async () => {
+    const token = getToken();
+    if (!token) throw new Error('Your session expired. Sign in again.');
+    const value = text.value.trim();
+    if (!value) throw new Error('Enter some text first.');
+    calling = true;
+    upload.disabled = true;
+    status.textContent = 'Uploading file...';
+    output.hidden = true;
+    try {
+      const response = await fetch(UPLOAD_ASSET_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: value }),
+        credentials: 'omit',
+        cache: 'no-store',
+        redirect: 'error',
+        signal: AbortSignal.timeout(30000),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(`${response.status}: ${result.error || 'Request failed.'}`);
+      output.textContent = JSON.stringify(result, null, 2);
+      output.hidden = false;
+      status.textContent = 'File uploaded.';
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('API request blocked or unreachable. Check CORS preflight, CSP, and the deployed URL.');
+      }
+      throw error;
+    } finally {
+      calling = false;
+      upload.disabled = !signedIn;
+    }
+  });
 
   block.append(identity, controls, status, details, output);
   const unsubscribe = subscribe((state) => {
@@ -143,6 +177,8 @@ export default async function decorate(block) {
     text.hidden = !signedIn;
     create.hidden = !signedIn;
     create.disabled = state.busy || calling;
+    upload.hidden = !signedIn;
+    upload.disabled = state.busy || calling;
     details.hidden = !signedIn;
     signin.disabled = !ready || state.busy;
     signout.disabled = state.busy || calling;
