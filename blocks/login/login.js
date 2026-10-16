@@ -1,5 +1,5 @@
 import {
-  initIms, signIn, signOut, getToken, subscribe, IMS_ORG_ID, WHOAMI_URL,
+  initIms, signIn, signOut, getToken, subscribe, IMS_ORG_ID, WHOAMI_URL, CREATE_FRAGMENT_URL,
 } from '../../scripts/ims.js';
 
 export default async function decorate(block) {
@@ -86,6 +86,51 @@ export default async function decorate(block) {
     }
   });
 
+  const text = document.createElement('input');
+  text.type = 'text';
+  text.maxLength = 2000;
+  text.placeholder = 'Fragment text';
+  text.setAttribute('aria-label', 'Fragment text');
+  const create = button('Create fragment', async () => {
+    const token = getToken();
+    if (!token) throw new Error('Your session expired. Sign in again.');
+    const value = text.value.trim();
+    if (!value) throw new Error('Enter some text first.');
+    calling = true;
+    create.disabled = true;
+    status.textContent = 'Creating fragment...';
+    output.hidden = true;
+    try {
+      const response = await fetch(CREATE_FRAGMENT_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-gw-ims-org-id': IMS_ORG_ID,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: value.slice(0, 100), text: value }),
+        credentials: 'omit',
+        cache: 'no-store',
+        redirect: 'error',
+        signal: AbortSignal.timeout(20000),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(`${response.status}: ${result.error || 'Request failed.'}`);
+      output.textContent = JSON.stringify(result, null, 2);
+      output.hidden = false;
+      status.textContent = 'Fragment created.';
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('API request blocked or unreachable. Check CORS preflight, CSP, and the deployed URL.');
+      }
+      throw error;
+    } finally {
+      calling = false;
+      create.disabled = !signedIn;
+    }
+  });
+  controls.insertBefore(text, create);
+
   block.append(identity, controls, status, details, output);
   const unsubscribe = subscribe((state) => {
     signedIn = state.signedIn;
@@ -95,6 +140,9 @@ export default async function decorate(block) {
     signin.hidden = signedIn;
     signout.hidden = !signedIn;
     call.hidden = !signedIn;
+    text.hidden = !signedIn;
+    create.hidden = !signedIn;
+    create.disabled = state.busy || calling;
     details.hidden = !signedIn;
     signin.disabled = !ready || state.busy;
     signout.disabled = state.busy || calling;
