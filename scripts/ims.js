@@ -33,11 +33,19 @@ export function isSignedIn() {
 
 function notify() {
   const token = getToken();
+  let scopes = '';
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    scopes = typeof payload.scope === 'string' ? payload.scope : '';
+  } catch (error) {
+    scopes = '';
+  }
   const state = {
     signedIn: Boolean(token),
     profile,
     expiresAt,
     tokenPrefix: token ? token.slice(0, 8) : '',
+    scopes,
     busy,
     message,
   };

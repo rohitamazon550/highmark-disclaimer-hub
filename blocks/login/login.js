@@ -188,7 +188,7 @@ export default async function decorate(block) {
     signout.disabled = state.busy || calling;
     call.disabled = state.busy || calling;
     debug.textContent = signedIn
-      ? `Token expires: ${new Date(state.expiresAt).toISOString()}\nToken prefix: ${state.tokenPrefix}` : '';
+      ? `Token expires: ${new Date(state.expiresAt).toISOString()}\nToken prefix: ${state.tokenPrefix}\nScopes: ${state.scopes || '(not readable)'}` : '';
     if (!signedIn) {
       output.hidden = true;
       output.textContent = '';
