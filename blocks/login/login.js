@@ -130,12 +130,7 @@ export default async function decorate(block) {
     }
   });
   controls.insertBefore(text, create);
-  const assetInput = document.createElement('input');
-  assetInput.type = 'text';
-  assetInput.maxLength = 80;
-  assetInput.placeholder = 'Asset ID (urn:aaid:aem:...) optional';
-  assetInput.setAttribute('aria-label', 'Asset ID for the AEM read check');
-  const check = button('Check AEM read access', async () => {
+  const check = button('List assets in /content/dam/projects', async () => {
     const token = getToken();
     if (!token) throw new Error('Your session expired. Sign in again.');
     calling = true;
@@ -143,9 +138,7 @@ export default async function decorate(block) {
     status.textContent = 'Checking AEM access...';
     output.hidden = true;
     try {
-      const checkUrl = new URL(AEM_CHECK_URL);
-      if (assetInput.value.trim()) checkUrl.searchParams.set('assetId', assetInput.value.trim());
-      const response = await fetch(checkUrl, {
+      const response = await fetch(AEM_CHECK_URL, {
         headers: { Authorization: `Bearer ${token}`, 'x-gw-ims-org-id': IMS_ORG_ID },
         credentials: 'omit',
         cache: 'no-store',
@@ -167,7 +160,6 @@ export default async function decorate(block) {
       check.disabled = !signedIn;
     }
   });
-  controls.insertBefore(assetInput, check);
   const upload = button('Upload test file', async () => {
     const token = getToken();
     if (!token) throw new Error('Your session expired. Sign in again.');
@@ -222,7 +214,6 @@ export default async function decorate(block) {
     upload.hidden = !signedIn;
     upload.disabled = state.busy || calling;
     check.hidden = !signedIn;
-    assetInput.hidden = !signedIn;
     check.disabled = state.busy || calling;
     details.hidden = !signedIn;
     signin.disabled = !ready || state.busy;
